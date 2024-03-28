@@ -1,0 +1,1 @@
+# node-salary-slip-management
