@@ -21,7 +21,7 @@ exports.isAuthenticated = async (req, res, next) => {
             return res.status(HTTP_STATUS_CODE.UNAUTHORIZED).json({ status: HTTP_STATUS_CODE.UNAUTHORIZED, success: false, message: "Token is expired or Invalid." });
         }
 
-        req.user = decoded._id
+        req.user = decoded.id
 
         next();
 

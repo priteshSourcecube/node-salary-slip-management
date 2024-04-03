@@ -10,11 +10,13 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // define association here
+      Payslips.added_by = Payslips.belongsTo(models.Users, { foreignKey: "added_by", as: "addedBy" })
     }
   }
   Payslips.init({
+    added_by: DataTypes.INTEGER,
     file: DataTypes.STRING,
+    file_name: DataTypes.STRING,
     deletedAt: DataTypes.DATE
   }, {
     sequelize,

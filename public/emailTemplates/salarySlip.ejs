@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salary Slip</title>
+    <style>
+        /* Internal CSS for styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Salary Slip</h1>
+    <p>Name: <%= name %>
+    </p>
+    <p>Paid Leave: <%= paid_leave %>
+    </p>
+    <p>Remaining Leave: <%= remaining_leave %>
+    </p>
+
+    <table>
+        <tr>
+            <th>Field</th>
+            <th>Value</th>
+        </tr>
+        <tr>
+            <td>Employee ID</td>
+            <td>
+                <%= emp_id %>
+            </td>
+        </tr>
+        <tr>
+            <td>Salary</td>
+            <td>
+                <%= salary %>
+            </td>
+        </tr>
+        <tr>
+            <td>Working Days</td>
+            <td>
+                <%= working_days %>
+            </td>
+        </tr>
+        <tr>
+            <td>Leave</td>
+            <td>
+                <%= leave %>
+            </td>
+        </tr>
+        <tr>
+            <td>Gross Pay</td>
+            <td>
+                <%= gross_pay %>
+            </td>
+        </tr>
+        <tr>
+            <td>Deduction</td>
+            <td>
+                <%= deduction %>
+            </td>
+        </tr>
+        <tr>
+            <td>Net Pay</td>
+            <td>
+                <%= net_pay %>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

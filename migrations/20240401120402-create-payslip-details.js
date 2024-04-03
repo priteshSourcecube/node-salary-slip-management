@@ -2,15 +2,36 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Payslips', {
+    await queryInterface.createTable('Payslip_details', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      file: {
+      payslip_id: {
         type: Sequelize.STRING
+      },
+      emp_id: {
+        type: Sequelize.STRING
+      },
+      salary: {
+        type: Sequelize.INTEGER
+      },
+      working_days: {
+        type: Sequelize.INTEGER
+      },
+      leave: {
+        type: Sequelize.INTEGER
+      },
+      gross_pay: {
+        type: Sequelize.INTEGER
+      },
+      deduction: {
+        type: Sequelize.INTEGER
+      },
+      net_pay: {
+        type: Sequelize.INTEGER
       },
       deletedAt: {
         type: Sequelize.DATE
@@ -26,6 +47,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Payslips');
+    await queryInterface.dropTable('Payslip_details');
   }
 };

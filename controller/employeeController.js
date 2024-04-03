@@ -1,5 +1,5 @@
 const { Employees } = require("../models")
-const { ConflictRequestException, BadRequestException } = require("../common/exceptions/index")
+const { BadRequestException } = require("../common/exceptions/index")
 const { HTTP_STATUS_CODE } = require("../helper/constants.helper")
 const Op = require('sequelize').Op
 const multer = require("multer");
@@ -7,9 +7,35 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage });
 const csv = require('csv-parser');
 const { Readable } = require('stream');
+const { generateEmpId } = require("../helper/generateEmpId");
+
+
+const newEmployeeId = async () => {
+    const empCount = await Employees.findAll({
+        attributes: ['emp_id']
+    });
+
+    const empIds = empCount.map(emp => emp.emp_id);
+    const maxEmpId = empIds.reduce((maxId, currentId) => {
+        const maxNum = parseInt(maxId.substring(4));
+        const currentNum = parseInt(currentId.substring(4));
+        return maxNum > currentNum ? maxId : currentId;
+    });
+
+    let tempBid = "";
+    if (!maxEmpId) {
+        tempBid = "#EMP0000000";
+    } else {
+        tempBid = maxEmpId;
+    }
+
+    const empId = generateEmpId(tempBid);
+    return empId;
+}
 
 const addEmployee = async (req, res) => {
-    let { name, emp_id, email, joining_date, paid_leave, remaining_leave } = req.body
+    let { name, email, joining_date, paid_leave, remaining_leave } = req.body
+    let empId = await newEmployeeId()
 
     const isEmailExits = await Employees.findOne({
         where: {
@@ -23,12 +49,7 @@ const addEmployee = async (req, res) => {
         throw new BadRequestException("An account already exists with this email address.")
     }
 
-    const isEmpIdExits = await Employees.findOne({ where: { emp_id: emp_id } })
-    if (isEmpIdExits) {
-        throw new BadRequestException("Employee id is already exits.")
-    }
-
-    await Employees.create({ emp_id, name, email, joining_date, paid_leave, remaining_leave })
+    await Employees.create({ emp_id: empId, name, email, joining_date, paid_leave, remaining_leave })
 
     return res.status(HTTP_STATUS_CODE.OK).json({ status: HTTP_STATUS_CODE.OK, success: true, message: "Employee added successfully." });
 }
@@ -54,6 +75,7 @@ const addBulkEmployee = async (req, res) => {
 
         let employees = [];
         const promises = [];
+        let empIdExits
 
         const validateFields = ["Emp id", 'Name', "Email", "Joining Date", "Paid Leave", "Remaining Leave",]
         let validateFieldsError;
@@ -65,9 +87,14 @@ const addBulkEmployee = async (req, res) => {
                 return validateFieldsError
             }
 
-            const isEmailExits = await Employees.findOne({ where: { email: row?.Email, deletedAt: { [Op.eq]: null } } })
+            const isEmailExits = await Employees.findOne({ where: { email: row?.Email } })
 
             const isEmpIdExits = await Employees.findOne({ where: { emp_id: row['Emp id'] } })
+            if (isEmpIdExits) {
+                empIdExits = { success: false, message: "Employee id is already assigned.", emp_id: row['Emp id'] }
+                return empIdExits
+            }
+
             if (!isEmailExits && !isEmpIdExits) {
                 employees.push({
                     emp_id: row['Emp id'],
@@ -89,12 +116,18 @@ const addBulkEmployee = async (req, res) => {
                     return validateFieldsError
                 }
 
-                if (employees?.length) {
-                    await Employees.bulkCreate(employees);
-                    return { success: true, message: "Bulk employees added successfully." };
+                if (empIdExits && !empIdExits?.success) {
+                    return empIdExits
+
                 } else {
-                    return { success: false, message: "No data found." };
+                    if (employees?.length) {
+                        await Employees.bulkCreate(employees);
+                        return { success: true, message: "Bulk employees added successfully." };
+                    } else {
+                        return { success: false, message: "No data found." };
+                    }
                 }
+
 
             } catch (error) {
                 console.error('Error inserting bulk employees:', error);
@@ -113,7 +146,7 @@ const addBulkEmployee = async (req, res) => {
                     if (result.success) {
                         return res.status(HTTP_STATUS_CODE.OK).json({ status: HTTP_STATUS_CODE.OK, success: true, message: result.message });
                     } else {
-                        return res.status(HTTP_STATUS_CODE.BAD_REQUEST).json({ status: HTTP_STATUS_CODE.BAD_REQUEST, success: false, message: result.message });
+                        return res.status(HTTP_STATUS_CODE.BAD_REQUEST).json({ status: HTTP_STATUS_CODE.BAD_REQUEST, success: false, message: result.message, details: result.emp_id || null });
                     }
                 } catch (error) {
                     console.error('Error processing all data:', error);
@@ -125,7 +158,7 @@ const addBulkEmployee = async (req, res) => {
 }
 
 const updateEmployee = async (req, res) => {
-    let { id, email, emp_id } = req.body
+    let { id, email } = req.body
 
     const employee = await Employees.findOne({ where: { id: id, deletedAt: { [Op.eq]: null } } })
     if (!employee) {
@@ -147,14 +180,6 @@ const updateEmployee = async (req, res) => {
         req.body.email = email;
     }
 
-    // check for emp_id exists
-    if (emp_id) {
-        const isEmpIdExits = await Employees.findOne({ where: { emp_id: emp_id, id: { [Op.ne]: id } } })
-        if (isEmpIdExits) {
-            throw new BadRequestException("Employee id is already exits.")
-        }
-    }
-
     await Employees.update(req.body, { where: { id: id } })
 
     return res.status(HTTP_STATUS_CODE.OK).json({ status: HTTP_STATUS_CODE.OK, success: true, message: "Employee updated successfully." });
@@ -167,10 +192,13 @@ const getAllEmployee = async (req, res) => {
                 [Op.eq]: null,
             },
         },
-        attributes: { exclude: ['deletedAt', 'updatedAt'] }
+        attributes: {
+            exclude: ['deletedAt', 'updatedAt'],
+        },
+        order: [['createdAt', 'DESC']],
     })
 
-    return res.status(HTTP_STATUS_CODE.OK).json({ status: HTTP_STATUS_CODE.OK, success: true, message: "Employee list loaded successfully.", employees });
+    return res.status(HTTP_STATUS_CODE.OK).json({ status: HTTP_STATUS_CODE.OK, success: true, message: "Employee list loaded successfully.", data: employees });
 }
 
 const deleteEmployee = async (req, res) => {
